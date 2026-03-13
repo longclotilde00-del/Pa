@@ -1,13 +1,33 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>ParcourStat</title>
-</head>
-<body>
-    <h1>ParcourStat yum</h1>
-    <p>Formations : <strong>{{ total_formations }}</strong></p>
-    <p>Établissements : <strong>{{ total_etablissements }}</strong></p>
-    <p>Régions : <strong>{{ total_regions }}</strong></p>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Accueil — ParcourStat{% endblock %}
+
+{% block content %}
+<div class="row text-center mt-4">
+    <h1 class="mb-4">Bienvenue sur ParcourStat 📊</h1>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="text-primary">{{ total_formations }}</h2>
+                <p class="card-text">Formations</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="text-success">{{ total_etablissements }}</h2>
+                <p class="card-text">Établissements</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="text-warning">{{ total_regions }}</h2>
+                <p class="card-text">Régions</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

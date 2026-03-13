@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}{{ formation.nom }} — ParcourStat{% endblock %}
+
+{% block content %}
+<a href="/formations" class="btn btn-outline-secondary mb-4">← Retour aux formations</a>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-dark text-white">
+        <h2 class="mb-0">{{ formation.nom }}</h2>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h5> Établissement</h5>
+                <p>{{ formation.etablissement }}</p>
+                <p class="text-muted">{{ formation.statut }}</p>
+                <p> {{ formation.adresse }}</p>
+                {% if formation.site_web %}
+                <a href="{{ formation.site_web }}" target="_blank" class="btn btn-outline-primary btn-sm">🌐 Site web</a>
+                {% endif %}
+                <div class="mt-4">
+    {% if current_user.is_authenticated %}
+        {% if est_favori %}
+            <a href="/favori/supprimer/{{ formation.id }}" class="btn btn-danger">❤️ Retirer des favoris</a>
+        {% else %}
+            <a href="/favori/ajouter/{{ formation.id }}" class="btn btn-outline-danger">🤍 Ajouter aux favoris</a>
+        {% endif %}
+    {% else %}
+        <a href="/connexion" class="btn btn-outline-secondary">Connectez-vous pour ajouter aux favoris</a>
+    {% endif %}
+</div>
+            </div>
+            <div class="col-md-6">
+                <h5> Formation</h5>
+                <p><strong>Type :</strong> {{ formation.type_formation }}</p>
+                <p><strong>Discipline :</strong> {{ formation.discipline }}</p>
+                <p><strong>Sélective :</strong> 
+                    {% if formation.selectivite %}
+                        <span class="badge bg-danger">Oui</span>
+                    {% else %}
+                        <span class="badge bg-success">Non</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

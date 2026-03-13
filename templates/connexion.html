@@ -1,16 +1,31 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Connexion</title>
-</head>
-<body>
-    <h1>Se connecter</h1>
-    <form method="POST">
-        <input type="email" name="email" placeholder="Email"><br>
-        <input type="password" name="password" placeholder="Mot de passe"><br>
-        <button type="submit">Se connecter</button>
-    </form>
-    <a href="/inscription">Pas encore de compte ? S'inscrire</a>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Connexion — ParcourStat{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0">Se connecter</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" placeholder="ton@email.com" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mot de passe</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-dark w-100">Se connecter</button>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <small>Pas encore de compte ? <a href="/inscription">S'inscrire</a></small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
