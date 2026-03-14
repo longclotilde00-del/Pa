@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Graphiques — ParcourStat{% endblock %}
+
+{% block content %}
+
+<h1 class="mb-4">Analyse d'une formation</h1>
+
+<!-- Filtres -->
+<form method="GET" action="/graphiques" class="mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label for="formation" class="form-label fw-bold">Formation</label>
+            <select name="formation_id" id="formation" class="form-select">
+                <option value="">-- Choisir une formation --</option>
+                {% for f in formations %}
+                <option value="{{ f.id }}" {% if formation_id == f.id %}selected{% endif %}>
+                    {{ f.nom[:60] }}{% if f.nom|length > 60 %}...{% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="annee" class="form-label fw-bold">Année</label>
+            <select name="annee" id="annee" class="form-select">
+                {% for a in annees %}
+                <option value="{{ a }}" {% if annee == a %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="situation" class="form-label fw-bold">Situation</label>
+            <select name="situation" id="situation" class="form-select">
+                <option value="candidats" {% if situation == 'candidats' %}selected{% endif %}>Candidats</option>
+                <option value="admis" {% if situation == 'admis' %}selected{% endif %}>Admis</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-dark w-100">Afficher</button>
+        </div>
+    </div>
+</form>
+
+{% if data %}
+
+<!-- Infos générales sur la formation -->
+<div class="card mb-4 border-secondary">
+    <div class="card-body">
+        <h5 class="card-title">{{ data.formation_nom }}</h5>
+        <p class="card-text text-muted mb-1">📍 {{ data.etablissement }}</p>
+        <div class="row mt-2">
+            <div class="col-md-4">
+                {% if data.capacite %}
+                    <span class="fw-bold">Capacité d'accueil :</span> {{ data.capacite }} places
+                {% else %}
+                    <span class="text-muted">Capacité non disponible</span>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <span class="fw-bold">Total {{ situation }} :</span> {{ data.total }}
+            </div>
+            <div class="col-md-4">
+                <span class="fw-bold">Année :</span> {{ annee }} — <span class="text-capitalize">{{ situation }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quatre camemberts -->
+<div class="row mb-4">
+
+    <!-- Boursiers : disponible candidats ET admis -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-center">Part des boursiers</h6>
+                {% if data.pct_boursiers is not none %}
+                    <canvas id="graphique_boursiers"></canvas>
+                {% else %}
+                    <p class="text-muted text-center">Données non disponibles</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sexe : disponible uniquement pour les candidats -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-center">Répartition par sexe</h6>
+                {% if data.pct_femmes is not none %}
+                    <canvas id="graphique_sexe"></canvas>
+                {% else %}
+                    <p class="text-muted text-center">
+                        Données disponibles uniquement pour les candidats
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Filière : disponible candidats ET admis -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-center">Filière d'origine</h6>
+                {% if data.pct_generale is not none %}
+                    <canvas id="graphique_filiere"></canvas>
+                {% else %}
+                    <p class="text-muted text-center">Données non disponibles</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Mentions : disponible uniquement pour les admis -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-center">Mention au baccalauréat</h6>
+                {% if data.pct_sm is not none %}
+                    <canvas id="graphique_mention"></canvas>
+                {% else %}
+                    <p class="text-muted text-center">
+                        Données disponibles uniquement pour les admis
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Résumé chiffré -->
+<div class="card border-dark mb-4">
+    <div class="card-header bg-dark text-white fw-bold">Résumé chiffré</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <ul class="list-unstyled">
+                    <li>🎓 <strong>Boursiers :</strong>
+                        {% if data.pct_boursiers is not none %}
+                            {{ data.pct_boursiers }} % ({{ data.nb_boursiers }} personnes)
+                        {% else %}
+                            Non disponible
+                        {% endif %}
+                    </li>
+                    <li>♀ <strong>Femmes :</strong>
+                        {% if data.pct_femmes is not none %}
+                            {{ data.pct_femmes }} % ({{ data.nb_femmes }} personnes)
+                        {% else %}
+                            Non disponible pour les admis
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <ul class="list-unstyled">
+                    <li>📚 <strong>Filière générale :</strong>
+                        {% if data.pct_generale is not none %}{{ data.pct_generale }} %{% else %}N/A{% endif %}
+                    </li>
+                    <li>🔧 <strong>Filière technologique :</strong>
+                        {% if data.pct_techno is not none %}{{ data.pct_techno }} %{% else %}N/A{% endif %}
+                    </li>
+                    <li>🏭 <strong>Filière professionnelle :</strong>
+                        {% if data.pct_pro is not none %}{{ data.pct_pro }} %{% else %}N/A{% endif %}
+                    </li>
+                </ul>
+            </div>
+            <div class="col-12 mt-2">
+                <ul class="list-unstyled">
+                    <li>🏅 <strong>Mentions :</strong>
+                        {% if data.pct_tb is not none %}
+                            Très bien : {{ data.pct_tb }} % —
+                            Bien : {{ data.pct_bien }} % —
+                            Assez bien : {{ data.pct_ab }} % —
+                            Sans mention : {{ data.pct_sm }} %
+                        {% else %}
+                            Non disponibles pour les candidats
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+<script>
+    const donneesGraphiques = {
+        pct_boursiers: {{ data.pct_boursiers | default('null', true) }},
+        pct_femmes: {{ data.pct_femmes | default('null', true) }},
+        pct_generale: {{ data.pct_generale | default('null', true) }},
+        pct_techno: {{ data.pct_techno | default('null', true) }},
+        pct_pro: {{ data.pct_pro | default('null', true) }},
+        pct_tb: {{ data.pct_tb | default('null', true) }},
+        pct_bien: {{ data.pct_bien | default('null', true) }},
+        pct_ab: {{ data.pct_ab | default('null', true) }},
+        pct_sm: {{ data.pct_sm | default('null', true) }}
+    };
+
+    const couleurs = ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f'];
+
+    function creerCamembert(id, labels, valeurs) {
+        const ctx = document.getElementById(id);
+        if (!ctx) return;
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: valeurs,
+                    backgroundColor: couleurs.slice(0, labels.length)
+                }]
+            },
+            options: {
+                responsive: true,
+                legend: { position: 'bottom' }
+            }
+        });
+    }
+
+    if (donneesGraphiques.pct_boursiers !== null) {
+        creerCamembert(
+            'graphique_boursiers',
+            ['Boursiers', 'Non boursiers'],
+            [donneesGraphiques.pct_boursiers, 100 - donneesGraphiques.pct_boursiers]
+        );
+    }
+
+    if (donneesGraphiques.pct_femmes !== null) {
+        creerCamembert(
+            'graphique_sexe',
+            ['Femmes', 'Hommes'],
+            [donneesGraphiques.pct_femmes, 100 - donneesGraphiques.pct_femmes]
+        );
+    }
+
+    if (donneesGraphiques.pct_generale !== null) {
+        creerCamembert(
+            'graphique_filiere',
+            ['Générale', 'Technologique', 'Professionnelle'],
+            [donneesGraphiques.pct_generale, donneesGraphiques.pct_techno, donneesGraphiques.pct_pro]
+        );
+    }
+
+    if (donneesGraphiques.pct_sm !== null) {
+        creerCamembert(
+            'graphique_mention',
+            ['Très bien', 'Bien', 'Assez bien', 'Sans mention'],
+            [donneesGraphiques.pct_tb, donneesGraphiques.pct_bien, donneesGraphiques.pct_ab, donneesGraphiques.pct_sm]
+        );
+    }
+</script>
+
+{% else %}
+<div class="alert alert-info mt-3">
+    Sélectionne une formation, une année et une situation pour afficher les graphiques.
+</div>
+{% endif %}
+
+{% endblock %}

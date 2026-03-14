@@ -10,3 +10,5 @@ def regions():
         result = conn.execute(text('SELECT nom_region FROM "ParcourStat".region ORDER BY nom_region'))
         regions = result.fetchall()
     return render_template('regions.html', regions=regions)
+
+

@@ -167,6 +167,126 @@ def mes_favoris():
     
     return render_template("mes_favoris.html", formations=formations)
 
+@app.route("/graphiques", methods=['GET'])
+@login_required
+def graphiques():
+    formations = db.session.execute(text("""
+        SELECT MIN(id) as "id", nom, MIN(etablissement_id) as "etablissement_id"
+        FROM "ParcourStat".formation
+        GROUP BY nom                               
+        ORDER BY nom
+    """)).mappings().fetchall()  #on groupe les formations par nom pour éviter que la même formation apparaisse plusieurs fois
+    #ajout de MIN() sur l'id et l'id établissement pour prendre l'id le plus petit et ainsi éviter les doublons 
+    #ajout de mappings pour accéder aux colonnes par leur nom dans le template avec f.id et f.nom
+
+
+    formation_id = request.args.get('formation_id', type=int)
+    situation = request.args.get('situation', 'admis')
+
+    #ajout d'une boucle pour les années, si la formation n'a des données que pour 2018, le menu de filtres ne proposera que 2018 
+    if formation_id:
+        annees = db.session.execute(text("""
+            SELECT DISTINCT annee FROM "ParcourStat".candidatures WHERE formation_id = :fid
+            UNION
+            SELECT DISTINCT annee FROM "ParcourStat".admissions WHERE formation_id = :fid
+            ORDER BY annee DESC
+        """), {"fid": formation_id}).fetchall()
+        annees = [r[0] for r in annees]
+    else:
+        annees = db.session.execute(text("""
+            SELECT DISTINCT annee FROM "ParcourStat".candidatures
+            UNION
+            SELECT DISTINCT annee FROM "ParcourStat".admissions
+            ORDER BY annee DESC
+        """)).fetchall()
+        annees = [r[0] for r in annees]
+
+    annee = request.args.get('annee', type=int, default=annees[0] if annees else None)
+
+    data = None
+
+    if formation_id and annee:
+        with engine.connect() as conn:
+            infos = conn.execute(text("""
+                SELECT f.nom, e.nom AS etablissement, f.selectivite
+                FROM "ParcourStat".formation f
+                JOIN "ParcourStat".etablissement e ON f.etablissement_id = e.id
+                WHERE f.id = :fid
+            """), {"fid": formation_id}).fetchone()
+
+            if situation == 'admis':
+                stats = conn.execute(text("""
+                    SELECT
+                        ea_nb    AS total,
+                        ea_bn_b  AS boursiers,
+                        ea_nb_g  AS generale,
+                        ea_nb_t  AS techno,
+                        ea_nb_p  AS pro,
+                        ea_nb_sm AS sans_mention,
+                        ea_nb_ab AS assez_bien,
+                        ea_nb_b  AS bien,
+                        ea_nb_tb AS tres_bien,
+                        ea_pc    AS capacite,
+                        NULL     AS femmes
+                    FROM "ParcourStat".admissions
+                    WHERE formation_id = :fid AND annee = :annee
+                """), {"fid": formation_id, "annee": annee}).fetchone()
+            else:
+                stats = conn.execute(text("""
+                    SELECT
+                        et_c    AS total,
+                        ec_b_nb AS boursiers,
+                        ec_nb_g AS generale,
+                        ec_nb_t AS techno,
+                        ec_nb_p AS pro,
+                        NULL    AS sans_mention,
+                        NULL    AS assez_bien,
+                        NULL    AS bien,
+                        NULL    AS tres_bien,
+                        NULL    AS capacite,
+                        et_cf   AS femmes
+                    FROM "ParcourStat".candidatures
+                    WHERE formation_id = :fid AND annee = :annee
+                """), {"fid": formation_id, "annee": annee}).fetchone()
+
+        if stats and infos:
+            total = stats.total or 1
+
+            def pct(val):
+                if val is None or total == 0:
+                    return None
+                return round((val / total) * 100, 1)
+
+            data = {
+                "formation_nom": infos.nom,
+                "etablissement": infos.etablissement,
+                "selectivite": infos.selectivite,
+                "capacite": stats.capacite,
+                "total": stats.total,
+                "nb_boursiers": stats.boursiers,
+                "pct_boursiers": pct(stats.boursiers),
+                "nb_femmes": stats.femmes,
+                "pct_femmes": pct(stats.femmes),
+                "pct_generale": pct(stats.generale),
+                "pct_techno": pct(stats.techno),
+                "pct_pro": pct(stats.pro),
+                "pct_sm": pct(stats.sans_mention),
+                "pct_ab": pct(stats.assez_bien),
+                "pct_bien": pct(stats.bien),
+                "pct_tb": pct(stats.tres_bien),
+            }
+
+    return render_template("graphique1.html",
+        formations=formations,
+        annees=annees,
+        formation_id=formation_id,
+        annee=annee,
+        situation=situation,
+        data=data
+    )
+
+
+
 from app.routes.auth import auth
 app.register_blueprint(auth)
 
