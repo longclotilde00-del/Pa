@@ -1,0 +1,196 @@
+{% extends "partials/conteneur.html" %}
+
+{% block body %}
+
+<!--on définit d'abord des graphiques vide,s puis fetch() va chercher les données-->
+{% if infos %}
+
+<!-- Infos générales sur la formation -->
+<div class="card mb-4 border-secondary">
+    <div class="card-body">
+        <h5 class="card-title">{{ infos.nom }}</h5>
+        <p class="card-text text-muted mb-1">📍 {{ infos.etablissement }}</p>
+        <div class="row mt-2">
+            <div class="col-md-6">
+                <span class="fw-bold">Année :</span> {{ annee }}
+            </div>
+            <div class="col-md-6">
+                <span class="fw-bold">Situation :</span> <span class="text-capitalize">{{ situation }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quatre camemberts vides au chargement -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-center">Part des boursiers</h6>
+                <canvas id="graphique_boursiers"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-center">Répartition par sexe</h6>
+                <canvas id="graphique_sexe"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-center">Filière d'origine</h6>
+                <canvas id="graphique_filiere"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-center">Mention au baccalauréat</h6>
+                <canvas id="graphique_mention"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Résumé chiffré — sera rempli par JS -->
+<div class="card border-dark mb-4">
+    <div class="card-header bg-dark text-white fw-bold">Résumé chiffré</div>
+    <div class="card-body" id="resume">
+        <p class="text-muted">Chargement des données...</p>
+    </div>
+</div>
+
+{% else %}
+<div class="alert alert-info mt-3">
+    Sélectionne une formation, une année et une situation pour afficher les graphiques.
+</div>
+{% endif %}
+
+<!-- Chart.js et plugins comme recommandé par le prof -->
+ <!--chrgement de chart.js-->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+<!--plugin qui permet de décaler le rendu du graphique jusqu'à ce qu'il oit visible dans la fenêtre-->
+
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-deferred@1.0.2/dist/chartjs-plugin-deferred.min.js"></script>
+<!--plugin qui ajoute automatiquement des couleurs aux graphiques-->
+
+<script type="text/javascript" src="https://github.com/nagix/chartjs-plugin-colorschemes/releases/download/v0.4.0/chartjs-plugin-colorschemes.js"></script>
+
+<script>
+//création d'un graphique vides avec des listes vides
+    function creerCamembertVide(id) {
+        const ctx = document.getElementById(id);
+        if (!ctx) return null;
+        return new Chart(ctx, {
+            type: 'pie', //type camembert
+            data: {
+                labels: [], //légendes vides
+                datasets: [{ data: [] }] //données vides
+            },
+            options: {
+                responsive: true,
+                legend: { position: 'bottom' }
+            }
+        });
+    }
+
+    //création de 4 graphqiues vides pour notre page, qu'on remplit ensuite avec fetch()
+    //chaque variable contient un objet chart à remplir
+    const graphBoursiers = creerCamembertVide('graphique_boursiers');
+    const graphSexe = creerCamembertVide('graphique_sexe');
+    const graphFiliere = creerCamembertVide('graphique_filiere');
+    const graphMention = creerCamembertVide('graphique_mention');
+
+    // on récupère les paramètres de l'url qui correspondent aux choix de l'utiliateur
+    const params = new URLSearchParams(window.location.search);
+    const formationId = params.get('formation_id');
+    const annee = params.get('annee');
+    const situation = params.get('situation') || 'admis';
+
+    // appel de la route avec les données a=grâce à fetch(), envoie une requête http à Flask sans recharger la page
+    if (formationId && annee) {
+        fetch(`/graphiques/donnees?formation_id=${formationId}&annee=${annee}&situation=${situation}`)
+        //conversion de la réponse en json
+            .then(response => response.json())
+            //on remplit les graphiques avec le json
+            .then(data => {
+                if (!data) return;
+
+                // définition d'une fonction pour remplir les graphiques existants avec des données, on modifie les labels et valeurs vides
+                function remplirCamembert(graphe, labels, valeurs) {
+                    graphe.data.labels = labels;
+                    graphe.data.datasets[0].data = valeurs;
+                    graphe.options.plugins = {
+                        colorschemes: { scheme: 'tableau.Tableau10' }
+                    };
+                    graphe.update();
+                }
+
+                //graphique sur les boursiers
+                if (graphBoursiers && data.pct_boursiers !== null) {
+                    remplirCamembert(graphBoursiers,
+                        ['Boursiers', 'Non boursiers'],
+                        [data.pct_boursiers, 100 - data.pct_boursiers]
+                    );
+                }
+
+                //graphique sur le sexe
+                if (graphSexe && data.pct_femmes !== null) {
+                    remplirCamembert(graphSexe,
+                        ['Femmes', 'Hommes'],
+                        [data.pct_femmes, 100 - data.pct_femmes]
+                    );
+                }
+
+                //graphique sur la filière
+                if (graphFiliere && data.pct_generale !== null) {
+                    remplirCamembert(graphFiliere,
+                        ['Générale', 'Technologique', 'Professionnelle'],
+                        [data.pct_generale, data.pct_techno, data.pct_pro]
+                    );
+                }
+
+                //graphique sur les mentions
+                if (graphMention && data.pct_sm !== null) {
+                    remplirCamembert(graphMention,
+                        ['Très bien', 'Bien', 'Assez bien', 'Sans mention'],
+                        [data.pct_tb, data.pct_bien, data.pct_ab, data.pct_sm]
+                    );
+                }
+
+                // on remplit le résumé en bas de la page 
+                document.getElementById('resume').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li>🎓 <strong>Boursiers :</strong> ${data.pct_boursiers ?? 'N/A'} %</li>
+                                <li>♀ <strong>Femmes :</strong> ${data.pct_femmes ?? 'Non disponible pour les admis'} %</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li>📚 <strong>Filière générale :</strong> ${data.pct_generale ?? 'N/A'} %</li>
+                                <li>🔧 <strong>Filière technologique :</strong> ${data.pct_techno ?? 'N/A'} %</li>
+                                <li>🏭 <strong>Filière professionnelle :</strong> ${data.pct_pro ?? 'N/A'} %</li>
+                            </ul>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <ul class="list-unstyled">
+                                <li>🏅 <strong>Mentions :</strong>
+                                    ${data.pct_tb !== null
+                                        ? `Très bien : ${data.pct_tb}% — Bien : ${data.pct_bien}% — Assez bien : ${data.pct_ab}% — Sans mention : ${data.pct_sm}%`
+                                        : 'Non disponibles pour les candidats'}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            });
+    }
+</script>
+{% endblock %}
