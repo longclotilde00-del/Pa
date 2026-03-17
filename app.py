@@ -167,127 +167,6 @@ def mes_favoris():
     
     return render_template("mes_favoris.html", formations=formations)
 
-"""
-première route créée 
-@app.route("/graphiques", methods=['GET'])
-@login_required
-def graphiques():
-    formations = db.session.execute(text("""
-        SELECT MIN(id) as "id", nom, MIN(etablissement_id) as "etablissement_id"
-        FROM "ParcourStat".formation
-        GROUP BY nom                               
-        ORDER BY nom
-    """)).mappings().fetchall()  
-    on groupe les formations par nom pour éviter que la même formation apparaisse plusieurs fois
-    ajout de MIN() sur l'id et l'id établissement pour prendre l'id le plus petit et ainsi éviter les doublons 
-    ajout de mappings pour accéder aux colonnes par leur nom dans le template avec f.id et f.nom
-
-
-    formation_id = request.args.get('formation_id', type=int)
-    situation = request.args.get('situation', 'admis')
-
-    ajout d'une boucle pour les années, si la formation n'a des données que pour 2018, le menu de filtres ne proposera que 2018 
-    if formation_id:
-        annees = db.session.execute(text("""
-            SELECT DISTINCT annee FROM "ParcourStat".candidatures WHERE formation_id = :fid
-            UNION
-            SELECT DISTINCT annee FROM "ParcourStat".admissions WHERE formation_id = :fid
-            ORDER BY annee DESC
-        """), {"fid": formation_id}).fetchall()
-        annees = [r[0] for r in annees]
-    else:
-        annees = db.session.execute(text("""
-            SELECT DISTINCT annee FROM "ParcourStat".candidatures
-            UNION
-            SELECT DISTINCT annee FROM "ParcourStat".admissions
-            ORDER BY annee DESC
-        """)).fetchall()
-        annees = [r[0] for r in annees]
-
-    annee = request.args.get('annee', type=int, default=annees[0] if annees else None)
-
-    data = None
-
-    if formation_id and annee:
-        with engine.connect() as conn:
-            infos = conn.execute(text("""
-                SELECT f.nom, e.nom AS etablissement, f.selectivite
-                FROM "ParcourStat".formation f
-                JOIN "ParcourStat".etablissement e ON f.etablissement_id = e.id
-                WHERE f.id = :fid
-            """), {"fid": formation_id}).fetchone()
-
-            if situation == 'admis':
-                stats = conn.execute(text("""
-                    SELECT
-                        ea_nb    AS total,
-                        ea_bn_b  AS boursiers,
-                        ea_nb_g  AS generale,
-                        ea_nb_t  AS techno,
-                        ea_nb_p  AS pro,
-                        ea_nb_sm AS sans_mention,
-                        ea_nb_ab AS assez_bien,
-                        ea_nb_b  AS bien,
-                        ea_nb_tb AS tres_bien,
-                        ea_pc    AS capacite,
-                        NULL     AS femmes
-                    FROM "ParcourStat".admissions
-                    WHERE formation_id = :fid AND annee = :annee
-                """), {"fid": formation_id, "annee": annee}).fetchone()
-            else:
-                stats = conn.execute(text("""
-                    SELECT
-                        et_c    AS total,
-                        ec_b_nb AS boursiers,
-                        ec_nb_g AS generale,
-                        ec_nb_t AS techno,
-                        ec_nb_p AS pro,
-                        NULL    AS sans_mention,
-                        NULL    AS assez_bien,
-                        NULL    AS bien,
-                        NULL    AS tres_bien,
-                        NULL    AS capacite,
-                        et_cf   AS femmes
-                    FROM "ParcourStat".candidatures
-                    WHERE formation_id = :fid AND annee = :annee
-                """), {"fid": formation_id, "annee": annee}).fetchone()
-
-        if stats and infos:
-            total = stats.total or 1
-
-            def pct(val):
-                if val is None or total == 0:
-                    return None
-                return round((val / total) * 100, 1)
-
-            data = {
-                "formation_nom": infos.nom,
-                "etablissement": infos.etablissement,
-                "selectivite": infos.selectivite,
-                "capacite": stats.capacite,
-                "total": stats.total,
-                "nb_boursiers": stats.boursiers,
-                "pct_boursiers": pct(stats.boursiers),
-                "nb_femmes": stats.femmes,
-                "pct_femmes": pct(stats.femmes),
-                "pct_generale": pct(stats.generale),
-                "pct_techno": pct(stats.techno),
-                "pct_pro": pct(stats.pro),
-                "pct_sm": pct(stats.sans_mention),
-                "pct_ab": pct(stats.assez_bien),
-                "pct_bien": pct(stats.bien),
-                "pct_tb": pct(stats.tres_bien),
-            }
-
-    return render_template("graphique1.html",
-        formations=formations,
-        annees=annees,
-        formation_id=formation_id,
-        annee=annee,
-        situation=situation,
-        data=data
-    )
-"""
 
 #deuxième essai d'une route avec claude mais en suivant le TD du prof
 #création d'une route qui renvoie uniquement les données, pas de html. Elle sera appellée par fetch() dans le js du template
@@ -308,41 +187,48 @@ def graphiques_donnees():
         #si l'utilisateur choisit admis sélection de la table admissions
         if situation == 'admis':
             #sélection des colonnes de la table admissions qui nous servirons pour les 4 graphiques
+            # Pour les admis
+            # on veut les statistiques générales pour uen formation choisie peu importe son établissement
+            # somme des lignes pour uen formation, puis calcul d'un pourcentage du total des lignes agrégées
             stats = conn.execute(text("""
-                SELECT
-                    ea_nb    AS total,
-                    ea_bn_b  AS boursiers,
-                    ea_nb_g  AS generale,
-                    ea_nb_t  AS techno,
-                    ea_nb_p  AS pro,
-                    ea_nb_sm AS sans_mention,
-                    ea_nb_ab AS assez_bien,
-                    ea_nb_b  AS bien,
-                    ea_nb_tb AS tres_bien,
-                    ea_pc    AS capacite,
-                    pa_f     AS pct_femmes
-                FROM "ParcourStat".admissions
-                WHERE formation_id = :fid AND annee = :annee 
-            """), {"fid": formation_id, "annee": annee}).fetchone() #fetch ???
-            #comment on été faits les choix des colonnes
+            SELECT
+                SUM(a.ea_nb)    AS total,
+                SUM(a.ea_bn_b)  AS boursiers,
+                SUM(a.ea_nb_g)  AS generale,
+                SUM(a.ea_nb_t)  AS techno,
+                SUM(a.ea_nb_p)  AS pro,
+                SUM(a.ea_nb_sm) AS sans_mention,
+                SUM(a.ea_nb_ab) AS assez_bien,
+                SUM(a.ea_nb_b)  AS bien,
+                SUM(a.ea_nb_tb) AS tres_bien,
+                AVG(a.ea_pc)    AS capacite, --déjà un pourcetage
+                AVG(a.pa_f)     AS femmes    --déjà un pourcentage
+            FROM "ParcourStat".admissions a
+            JOIN "ParcourStat".formation f ON a.formation_id = f.id
+            WHERE f.nom = (SELECT nom FROM "ParcourStat".formation WHERE id = :fid LIMIT 1)
+            AND a.annee = :annee
+        """), {"fid": formation_id, "annee": annee}).fetchone()
 
             #sinon, sélection de la table candidatures
         else:
+            # Pour les candidats
             stats = conn.execute(text("""
                 SELECT
-                    et_c    AS total,
-                    ec_b_nb AS boursiers,
-                    ec_nb_g AS generale,
-                    ec_nb_t AS techno,
-                    ec_nb_p AS pro,
-                    NULL    AS sans_mention,
-                    NULL    AS assez_bien,
-                    NULL    AS bien,
-                    NULL    AS tres_bien,
-                    NULL    AS capacite,
-                    et_cf   AS femmes
-                FROM "ParcourStat".candidatures
-                WHERE formation_id = :fid AND annee = :annee
+                    SUM(c.et_c)    AS total,
+                    SUM(c.ec_b_nb) AS boursiers,
+                    SUM(c.ec_nb_g) AS generale,
+                    SUM(c.ec_nb_t) AS techno,
+                    SUM(c.ec_nb_p) AS pro,
+                    NULL           AS sans_mention,
+                    NULL           AS assez_bien,
+                    NULL           AS bien,
+                    NULL           AS tres_bien,
+                    NULL           AS capacite,
+                    SUM(c.et_cf)   AS femmes
+                FROM "ParcourStat".candidatures c
+                JOIN "ParcourStat".formation f ON c.formation_id = f.id
+                WHERE f.nom = (SELECT nom FROM "ParcourStat".formation WHERE id = :fid LIMIT 1)
+                AND c.annee = :annee
             """), {"fid": formation_id, "annee": annee}).fetchone() #utilisation de fecthone() au lieu de fetchall() puisqu'on veut un seul résultat, il existe en effet qu'une seule ligne par formation et par année dans les tables admissions et candaidatures 
 
     #gestion des erreurs
@@ -358,19 +244,28 @@ def graphiques_donnees():
         if val is None or total == 0:
             return None
         return round((val / total) * 100, 1)
+    
+    #le nombre de femmes est déjà un pourcentage dans la table admissions, mais c'est un chiffre brut dans la table candidatures. 
+    # On crée donc ici un calcul de pourcentage selon la table qui est requêtée.
+    if situation == 'admis':
+        pct_femmes = round(stats.femmes, 1) if stats.femmes is not None else None
+    else:
+        pct_femmes = pct(stats.femmes)  # et_cf est un nombre brut → division par total
+
 
     #on retourne un dictionnaire en python, converti automatiquement json et apellé par fetch() dans le js
     #on retourne les données en pourcentages en appellant la fonction pct
     return {
         "pct_boursiers": pct(stats.boursiers),
-        "pct_femmes": pct(stats.femmes),
-        "pct_generale": pct(stats.generale),
+        "pct_femmes": pct_femmes,        
         "pct_techno": pct(stats.techno),
         "pct_pro": pct(stats.pro),
         "pct_sm": pct(stats.sans_mention),
         "pct_ab": pct(stats.assez_bien),
         "pct_bien": pct(stats.bien),
         "pct_tb": pct(stats.tres_bien),
+        "pct_generale": pct(stats.generale),
+        "capacite": round(stats.capacite, 0) if stats.capacite is not None else None, #on fait une moyenne de la capacité d'une formation dans les établissements en FRance 
         "total": stats.total
     }
 
@@ -379,7 +274,7 @@ def graphiques_donnees():
 #récupère les listes des formations pour que l'utilisateur puisse choisir 
 #récupère les infos générales d'une formation : nom, établissement, sélectivité
 #génère page html avec graphiques vides
-@app.route("/graphiques2", methods=['GET'])
+@app.route("/graphiques", methods=['GET'])
 @login_required
 def graphiques():
     #MIN(id) et MIN(etablissement_id) pour éviter les doublons quand plusieurs lignes ont le même nom de formation 
@@ -396,6 +291,7 @@ def graphiques():
     formation_id = request.args.get('formation_id', type=int)
     situation = request.args.get('situation', 'admis')
 
+    
 #si une formation est sélectionnée, on récupère les données issues des années disponibles en base pour cette même formation
     if formation_id:
         annees = db.session.execute(text("""
@@ -431,15 +327,29 @@ def graphiques():
                 WHERE f.id = :fid
             """), {"fid": formation_id}).fetchone()
     
-    #commentaires à ajouter 
+    # si une formaion est sélectionné, on affiche la liste des établissements qui offrent cette formation
+    etablissements = []
+    if formation_id:
+        with engine.connect() as conn:
+            etablissements = conn.execute(text("""
+                SELECT DISTINCT e.nom, e.adresse, e.site_web
+                FROM "ParcourStat".formation f
+                JOIN "ParcourStat".etablissement e ON f.etablissement_id = e.id
+                WHERE f.nom = (SELECT nom FROM "ParcourStat".formation WHERE id = :fid LIMIT 1)
+                ORDER BY e.nom
+            """), {"fid": formation_id}).mappings().fetchall()
+    
+    #génère page html avec les menus déoulants et les infos des formations seront chargées par fetch depuis le template html
+    #les données pour les graphiques seront
 
-    return render_template("graphique1.html",
+    return render_template("graphique.html",
         formations=formations,
         annees=annees,
         formation_id=formation_id,
         annee=annee,
         situation=situation,
-        infos=infos
+        infos=infos,
+        etablissements=etablissements
     )
 
 

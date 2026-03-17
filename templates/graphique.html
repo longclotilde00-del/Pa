@@ -1,32 +1,96 @@
-{% extends "partials/conteneur.html" %}
+{% extends "base.html" %}
 
-{% block body %}
+{% block content %}
 
-<!--on définit d'abord des graphiques vide,s puis fetch() va chercher les données-->
-{% if infos %}
+<!-- on crée ici le formulaire qui permet à l'utilisateur de choisir les filtres-->
+<form method="GET" action="/graphiques" class="mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+        <label for="formation" class="form-label fw-bold">Formation</label>
+        <select name="formation_id" id="formation" class="form-select">
+            <option value="">Formations</option>
+            <!--on récupère l'id des formations-->
+             {% for f in formations %}
+            <option value="{{ f.id }}" {% if formation_id|string == f.id|string %}selected{% endif %}>{{ f.nom[:200] }}</option>
+            {% endfor %}
+        </select>
 
-<!-- Infos générales sur la formation -->
-<div class="card mb-4 border-secondary">
-    <div class="card-body">
-        <h5 class="card-title">{{ infos.nom }}</h5>
-        <p class="card-text text-muted mb-1">📍 {{ infos.etablissement }}</p>
-        <div class="row mt-2">
-            <div class="col-md-6">
-                <span class="fw-bold">Année :</span> {{ annee }}
-            </div>
-            <div class="col-md-6">
-                <span class="fw-bold">Situation :</span> <span class="text-capitalize">{{ situation }}</span>
-            </div>
         </div>
+        <div class="col-md-3">
+            <label for="annee" class="form-label fw-bold">Année</label>
+            <select name="annee" id="annee" class="form-select">
+                {% for a in annees %}
+                <option value="{{ a }}" {% if annee == a %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+    <label class="form-label fw-bold">Situation</label>
+    <!--pour le choix de situation, les deux choix ne sont pas présentés sous forme de menu déroulant mais visibles côte à côte-->
+    <div class="btn-group w-100" role="group">
+        <input type="radio" class="btn-check" name="situation" id="sit_candidats" 
+               value="candidats" {% if situation == 'candidats' %}checked{% endif %}>
+        <label class="btn btn-outline-dark" for="sit_candidats">Candidats</label>
+
+        <input type="radio" class="btn-check" name="situation" id="sit_admis" 
+               value="admis" {% if situation == 'admis' %}checked{% endif %}>
+        <label class="btn btn-outline-dark" for="sit_admis">Admis</label>
     </div>
 </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-dark w-100">Afficher</button>
+        </div>
+    </div>
+</form>
 
-<!-- Quatre camemberts vides au chargement -->
+<!--on définit d'abord des graphiques vide,s puis fetch() va chercher les données-->
+<!--on crée une boucle avec jinja, si les infos sont slectionnées, alors la page se crée-->
+{% if infos %}
+
+<!-- on définit le html pour les informations générales sur les formations -->
+ <!--on affiche le nom de la formation et sa capacité en moyenne dans les établissements français-->
+ <!--la capacité est remplie dynamiquement par un élément javascript définit plus bas dans le code-->
+{% if infos %}
+<div class="text-center mb-4">
+    <h4>{{ infos.nom }}</h4>
+    {% if capacite %}
+    <p class="text-muted">Capacité moyenne : {{ capacite }} places</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<!--on ajoute en haut de la page la liste des établissements dans lesquels est proposée la formation choisie, ainsi que leur adresse et leur site web-->
+<!--la liste est un menu déroulant pour ne pas surcharger la page-->
+{% if etablissements %}
+<details class="mb-4">
+    <summary class="btn btn-outline-secondary">
+        Voir les {{ etablissements|length }} établissement(s) proposant cette formation
+    </summary>
+    <div class="card border-secondary mt-2">
+        <ul class="list-group list-group-flush">
+            {% for etab in etablissements %}
+            <li class="list-group-item">
+                <strong>{{ etab.nom }}</strong>
+                {% if etab.adresse %}
+                <span class="text-muted"> — {{ etab.adresse }}</span>
+                {% endif %}
+                {% if etab.site_web %}
+                <a href="{{ etab.site_web }}" target="_blank" class="ms-2">🌐 Site web</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</details>
+{% endif %}
+
+<!-- création de la structure de la page avec quatre emplacements vides pour y placer les graphiques -->
 <div class="row mb-4">
     <div class="col-md-6 mb-4">
         <div class="card h-100 shadow-sm">
             <div class="card-body">
                 <h6 class="card-title text-center">Part des boursiers</h6>
+                <!--création d'un id pour chaque graphique qui sera appellé dans le javascript-->
                 <canvas id="graphique_boursiers"></canvas>
             </div>
         </div>
@@ -57,9 +121,9 @@
     </div>
 </div>
 
-<!-- Résumé chiffré — sera rempli par JS -->
+<!-- création d'un emplacement en bas de la page pour le résumé selon la sélection de l'utilisateur, qui sera rempli par javascript -->
 <div class="card border-dark mb-4">
-    <div class="card-header bg-dark text-white fw-bold">Résumé chiffré</div>
+    <div class="card-header bg-dark text-white fw-bold">Résumé </div>
     <div class="card-body" id="resume">
         <p class="text-muted">Chargement des données...</p>
     </div>
@@ -71,7 +135,8 @@
 </div>
 {% endif %}
 
-<!-- Chart.js et plugins comme recommandé par le prof -->
+<!--partie javascript-->
+
  <!--chrgement de chart.js-->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
 <!--plugin qui permet de décaler le rendu du graphique jusqu'à ce qu'il oit visible dans la fenêtre-->
@@ -82,7 +147,8 @@
 <script type="text/javascript" src="https://github.com/nagix/chartjs-plugin-colorschemes/releases/download/v0.4.0/chartjs-plugin-colorschemes.js"></script>
 
 <script>
-//création d'un graphique vides avec des listes vides
+//le code cherche le canva dans le html via son id définit plus haut et crée un graphique camembert. 
+// Si l canva n'existe pas, le javascript ne retourne rien
     function creerCamembertVide(id) {
         const ctx = document.getElementById(id);
         if (!ctx) return null;
@@ -94,44 +160,56 @@
             },
             options: {
                 responsive: true,
-                legend: { position: 'bottom' }
+                legend: { position: 'bottom' } //légende qu s'affiche en bas du graphique
             }
         });
     }
 
-    //création de 4 graphqiues vides pour notre page, qu'on remplit ensuite avec fetch()
-    //chaque variable contient un objet chart à remplir
+    //on stocke les camamberts vides dans des variables. Ils seront mis à jour avec update() lorsque les données sont reçues avec fetch()
     const graphBoursiers = creerCamembertVide('graphique_boursiers');
     const graphSexe = creerCamembertVide('graphique_sexe');
     const graphFiliere = creerCamembertVide('graphique_filiere');
     const graphMention = creerCamembertVide('graphique_mention');
 
     // on récupère les paramètres de l'url qui correspondent aux choix de l'utiliateur
-    const params = new URLSearchParams(window.location.search);
+    const urlDonnees = "{{ url_for('graphiques_donnees') }}";
+
+    // on récupère les paramètres de l'url qui correspondent aux choix de l'utiliateur
+    const params = new URLSearchParams(window.location.search); //récupère une partie de l'url qui correspond aux choix utilisateur, transforme ce choix en objet qu'on peux récupérer avec get
     const formationId = params.get('formation_id');
     const annee = params.get('annee');
     const situation = params.get('situation') || 'admis';
 
-    // appel de la route avec les données a=grâce à fetch(), envoie une requête http à Flask sans recharger la page
+    // si formation et année sont sélectionnées, fetch() est lancé
+    // fetch() envoie une requête vers la route avec les paramètres de l'utilisateur en url 
     if (formationId && annee) {
-        fetch(`/graphiques/donnees?formation_id=${formationId}&annee=${annee}&situation=${situation}`)
+        fetch(`${urlDonnees}?formation_id=${formationId}&annee=${annee}&situation=${situation}`)
+
         //conversion de la réponse en json
             .then(response => response.json())
             //on remplit les graphiques avec le json
             .then(data => {
                 if (!data) return;
 
-                // définition d'une fonction pour remplir les graphiques existants avec des données, on modifie les labels et valeurs vides
-                function remplirCamembert(graphe, labels, valeurs) {
-                    graphe.data.labels = labels;
-                    graphe.data.datasets[0].data = valeurs;
-                    graphe.options.plugins = {
-                        colorschemes: { scheme: 'tableau.Tableau10' }
-                    };
-                    graphe.update();
+                //la capacité ne s'affiche pas pour l'instant : à modifier
+                const capaciteEl = document.getElementById('info-capacite');
+                if (capaciteEl && data.capacite !== null && data.capacite !== undefined) {
+                    capaciteEl.textContent = `Capacité moyenne : ${data.capacite} places`;
                 }
 
-                //graphique sur les boursiers
+                // définition d'une fonction pour remplir les graphiques existants avec des données, on modifie les labels et valeurs vides
+                function remplirCamembert(graphe, labels, valeurs) {
+                    graphe.data.labels = labels; //légendes
+                    graphe.data.datasets[0].data = valeurs; //pourcentages
+                    graphe.options.plugins = { //applique les couleurs grace au plugin
+                        colorschemes: { scheme: 'tableau.Tableau10' }
+                    };
+                    graphe.update(); //met à jour le graphique vide définit plus haut avec les données reçues
+                }
+
+                //ensuite, on remplit chaque graphique individuellement avec les données reçues par fetch()
+
+                //graphique sur les boursiers, si les données existe, on remplit le graphique
                 if (graphBoursiers && data.pct_boursiers !== null) {
                     remplirCamembert(graphBoursiers,
                         ['Boursiers', 'Non boursiers'],
@@ -163,7 +241,8 @@
                     );
                 }
 
-                // on remplit le résumé en bas de la page 
+                // on remplit le résumé en bas de la page dynamiquement à partir des données reçues via fetch()
+                // on cible la carte vide prévue pour le résumé dans le html définie plus haut
                 document.getElementById('resume').innerHTML = `
                     <div class="row">
                         <div class="col-md-6">
