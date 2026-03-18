@@ -168,7 +168,9 @@ def mes_favoris():
     return render_template("mes_favoris.html", formations=formations)
 
 
-#deuxième essai d'une route avec claude mais en suivant le TD du prof
+#création de deux routes pour la page graphiques, une route /grphiques qui génère la structure de la page html avec la liste des formations, des établissements et les infos générales de la formation et retourne un fichier html
+# graphiques_donnes retourne uniquement des données et des calculs de données avec les calculs de pourcentages etc.
+#la mise en place de deux routes séparées permet de pouvoir racharger les graphqiues lorsqu'une nouvelle formation est choisie sans recharger entièrement la page
 #création d'une route qui renvoie uniquement les données, pas de html. Elle sera appellée par fetch() dans le js du template
 
 @app.route("/graphiques/donnees", methods=['GET'])
@@ -327,17 +329,28 @@ def graphiques():
                 WHERE f.id = :fid
             """), {"fid": formation_id}).fetchone()
     
-    # si une formaion est sélectionné, on affiche la liste des établissements qui offrent cette formation
+    # si une formaion est sélectionné, on affiche la liste des établissements qui offrent cette formation, avec leurs infos: site web, adresse, nom 
+    # on effectue un case dans la requête sql pour afficher le taux d'admission de la formation dans chaque établissement : si le nombre de candidats existe, et donc est supérieur à 0, on divise le nombre d'admis par le nombre de candidats et on multiplie par 100
     etablissements = []
     if formation_id:
         with engine.connect() as conn:
             etablissements = conn.execute(text("""
-                SELECT DISTINCT e.nom, e.adresse, e.site_web
+                SELECT DISTINCT e.nom, e.adresse, e.site_web, 
+                    a.ea_nb AS nb_admis,
+                    c.et_c AS nb_candidats,
+                    CASE 
+                        WHEN c.et_c > 0 THEN ROUND((a.ea_nb::numeric / c.et_c) * 100, 1) --on converti le nombre d'admis en chiffre 
+                        ELSE NULL 
+                    END AS taux_admission
                 FROM "ParcourStat".formation f
                 JOIN "ParcourStat".etablissement e ON f.etablissement_id = e.id
+                LEFT JOIN "ParcourStat".admissions a ON a.formation_id = f.id AND a.annee = :annee
+                LEFT JOIN "ParcourStat".candidatures c ON c.formation_id = f.id AND c.annee = :annee
                 WHERE f.nom = (SELECT nom FROM "ParcourStat".formation WHERE id = :fid LIMIT 1)
                 ORDER BY e.nom
-            """), {"fid": formation_id}).mappings().fetchall()
+            """), {"fid": formation_id, "annee": annee}).mappings().fetchall()
+
+
     
     #génère page html avec les menus déoulants et les infos des formations seront chargées par fetch depuis le template html
     #les données pour les graphiques seront
@@ -349,7 +362,8 @@ def graphiques():
         annee=annee,
         situation=situation,
         infos=infos,
-        etablissements=etablissements
+        etablissements=etablissements,
+        
     )
 
 

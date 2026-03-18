@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+
 {% block content %}
 
 <!-- on crée ici le formulaire qui permet à l'utilisateur de choisir les filtres-->
@@ -60,6 +61,7 @@
 {% endif %}
 
 <!--on ajoute en haut de la page la liste des établissements dans lesquels est proposée la formation choisie, ainsi que leur adresse et leur site web-->
+<!--on affiche aussi pour chaque établissement le ratio entre le nombre de candidats et le nombre d'admis et le taux d'admissions ainsi calculé-->
 <!--la liste est un menu déroulant pour ne pas surcharger la page-->
 {% if etablissements %}
 <details class="mb-4">
@@ -77,6 +79,13 @@
                 {% if etab.site_web %}
                 <a href="{{ etab.site_web }}" target="_blank" class="ms-2">🌐 Site web</a>
                 {% endif %}
+                {% if etab.taux_admission %}
+                <span class="badge bg-success ms-2">{{ etab.taux_admission }}% d'admission</span>
+                {% endif %}
+                {% if etab.nb_admis and etab.nb_candidats %}
+                <span class="text-muted ms-1">({{ etab.nb_candidats }} candidats / {{ etab.nb_admis }} admis)</span>
+                {% endif %}
+
             </li>
             {% endfor %}
         </ul>
@@ -137,6 +146,10 @@
 
 <!--partie javascript-->
 
+<!--chargement de liens CDN choice js pour pouvoir choisir es formations-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script
+
  <!--chrgement de chart.js-->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
 <!--plugin qui permet de décaler le rendu du graphique jusqu'à ce qu'il oit visible dans la fenêtre-->
@@ -145,6 +158,19 @@
 <!--plugin qui ajoute automatiquement des couleurs aux graphiques-->
 
 <script type="text/javascript" src="https://github.com/nagix/chartjs-plugin-colorschemes/releases/download/v0.4.0/chartjs-plugin-colorschemes.js"></script>
+
+<!--on modifie ici le select pour les formations pour insérer un formulaire de recherche des formation-->
+<script>
+    const selectFormation = document.getElementById('formation');
+    new Choices(selectFormation, {
+        searchEnabled: true,          // active la recherche
+        searchPlaceholderValue: 'Rechercher une formation...',
+        itemSelectText: '',           // supprime le texte "appuyer pour sélectionner"
+        noResultsText: 'Aucune formation trouvée',
+        noChoicesText: 'Aucune formation disponible',
+        shouldSort: false,            // garde l'ordre alphabétique de ta requête SQL
+    });
+</script>
 
 <script>
 //le code cherche le canva dans le html via son id définit plus haut et crée un graphique camembert. 
