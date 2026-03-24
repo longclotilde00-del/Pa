@@ -1,0 +1,487 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&display=swap');
+
+
+:root {
+    --bleu: #003189;
+    --rouge: #E63027;
+    --blanc: #FFFFFF;
+    --bleu-clair: #0047c4;
+    --fond: #020b18;
+    --fond-carte: #041428;
+    --gris: #aabbcc;
+    --bordure: rgba(0, 49, 137, 0.5);         /* bordure bleue  */
+    --glow-bleu: 0 0 20px rgba(0, 71, 196, 0.6);
+    --glow-rouge: 0 0 20px rgba(230, 48, 39, 0.7);
+}
+
+/*FOND */
+body {
+    background-color: var(--fond);
+    color: var(--blanc);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 600;                         /* tout le texte courant en semi-gras */
+    overflow-x: hidden;
+}
+
+/* Grille de fond */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(0, 49, 137, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 49, 137, 0.05) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* SCAN LINE*/
+@keyframes scan {
+    0%   { top: -5%; }
+    100% { top: 105%; }
+}
+
+.scan-line {
+    position: fixed;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(0, 49, 137, 0.3),
+        rgba(0, 71, 196, 0.7),
+        rgba(0, 49, 137, 0.3),
+        transparent);
+    animation: scan 6s infinite linear;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Contenu au-dessus du fond */
+.navbar, main, footer {
+    position: relative;
+    z-index: 2;
+}
+
+/*NAVBAR */
+.navbar {
+    background: rgba(2, 11, 24, 0.97) !important;
+    border-bottom: 1px solid var(--bleu);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 20px rgba(0, 49, 137, 0.3);
+}
+
+.navbar-brand {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 1.1rem;
+    letter-spacing: 3px;
+    color: var(--blanc) !important;
+    background: linear-gradient(90deg, var(--blanc), #4d8fff, var(--blanc));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.nav-link {
+    color: var(--gris) !important;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    transition: color 0.3s ease;
+    position: relative;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    width: 0; height: 1px;
+    background: var(--bleu-clair);            /* soulignement bleu */
+    transition: width 0.3s ease;
+    transform: translateX(-50%);
+}
+
+.nav-link:hover {
+    color: var(--blanc) !important;
+}
+
+.nav-link:hover::after {
+    width: 100%;
+}
+
+/* TITRES */
+h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+    background: linear-gradient(135deg, var(--blanc) 0%, #4d8fff 50%, var(--blanc) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+}
+
+h1::after {
+    content: '';
+    display: block;
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--rouge), transparent);
+    margin-top: 8px;
+}
+
+h2, h4, h5 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    color: var(--blanc);
+    letter-spacing: 2px;
+}
+
+/* CARDS */
+.card {
+    background: linear-gradient(135deg, rgba(4, 20, 40, 0.95), rgba(2, 11, 24, 0.98));
+    border: 1px solid var(--bordure);        
+    border-radius: 0;
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.card:hover {
+    border-color: rgba(0, 71, 196, 0.8);
+    box-shadow: var(--glow-bleu);
+    transform: translateY(-3px);
+}
+
+.card-header {
+    background: linear-gradient(90deg, var(--bleu), rgba(0, 71, 196, 0.8)) !important;
+    border-radius: 0 !important;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    border-bottom: 1px solid var(--rouge) !important; /* rouge : seul accent conservé */
+    color: var(--blanc) !important;
+}
+
+
+.card-footer {
+    background: rgba(0, 49, 137, 0.08) !important;
+    border-top: 1px solid var(--bordure) !important;
+    color: var(--gris);
+}
+
+/* TABLEAU */
+.table {
+    color: var(--blanc);
+    border-color: var(--bordure);
+}
+
+.table-dark th {
+    background: linear-gradient(90deg, var(--bleu), rgba(0, 71, 196, 0.8)) !important;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-color: var(--bleu-clair) !important;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+    background: rgba(0, 49, 137, 0.08);
+    color: var(--blanc);
+}
+
+.table-striped > tbody > tr:nth-of-type(even) > * {
+    background: rgba(4, 20, 40, 0.6);
+    color: var(--blanc);
+}
+
+.table-hover > tbody > tr:hover > * {
+    background: rgba(0, 49, 137, 0.25) !important;
+    color: var(--blanc) !important;
+    transition: background 0.2s ease;
+}
+
+/* BOUTONS*/
+.btn {
+    border-radius: 0;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    transition: box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.btn-dark {
+    background: linear-gradient(135deg, var(--bleu), var(--bleu-clair));
+    border: 1px solid var(--bleu-clair);
+    color: var(--blanc);
+}
+
+.btn-dark:hover {
+    box-shadow: var(--glow-bleu);
+    color: var(--blanc);
+}
+
+.btn-outline-secondary {
+    border-color: var(--gris);
+    color: var(--gris);
+    font-weight: 700;
+}
+
+.btn-outline-secondary:hover {
+    background: var(--gris);
+    color: var(--fond);
+}
+
+.btn-outline-danger {
+    border-color: var(--rouge);
+    color: var(--rouge);
+    font-weight: 700;
+}
+
+.btn-outline-danger:hover {
+    background: var(--rouge);
+    color: var(--blanc);
+    box-shadow: var(--glow-rouge);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--rouge), #c0392b);
+    border: none;
+    font-weight: 700;
+}
+
+.btn-danger:hover {
+    box-shadow: var(--glow-rouge);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #00a86b, #00c880);
+    border: none;
+    font-weight: 700;
+}
+
+/* FORMULAIRES  */
+.form-control {
+    background: rgba(4, 20, 40, 0.9);
+    border: 1px solid var(--bordure);
+    color: var(--blanc);
+    border-radius: 0;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus {
+    background: rgba(4, 20, 40, 0.95);
+    border-color: var(--bleu-clair);
+    color: var(--blanc);
+    box-shadow: var(--glow-bleu);
+}
+
+.form-control::placeholder { color: var(--gris); }
+
+.form-label {
+    color: var(--gris);
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+
+/* PAGINATION  */
+.page-link {
+    background: rgba(4, 20, 40, 0.9);
+    border-color: var(--bordure);
+    color: var(--blanc);
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    border-radius: 0 !important;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.page-link:hover {
+    background: linear-gradient(135deg, var(--bleu), var(--bleu-clair));
+    border-color: var(--bleu-clair);
+    color: var(--blanc);
+    box-shadow: var(--glow-bleu);
+}
+
+.page-item.disabled .page-link {
+    background: rgba(0, 49, 137, 0.1);
+    color: var(--gris);
+    border-color: var(--bordure);
+}
+
+/* ADGES */
+.badge {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border-radius: 0;
+    font-size: 0.8rem;
+}
+
+/* LIENS*/
+a {
+    color: #4d8fff;
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+a:hover {
+    color: var(--blanc);
+    text-shadow: 0 0 8px rgba(77, 143, 255, 0.6);
+}
+
+/* FOOTER  */
+footer {
+    background: rgba(2, 11, 24, 0.98) !important;
+    border-top: 1px solid var(--bleu) !important;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: var(--gris) !important;
+}
+
+/*  STATS ACCUEIL */
+.card h2 {
+    font-size: 2.5rem;
+    background: linear-gradient(135deg, var(--blanc), #4d8fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.text-primary { color: #4d8fff !important; }
+.text-success { color: #00e676 !important; }
+.text-warning { color: var(--rouge) !important; }
+
+/* INPUT GROUP */
+.input-group .form-control { border-right: none; }
+.input-group .btn { border-left: 1px solid var(--bleu-clair); }
+
+/*  CORRECTIONS VISIBILITÉ */
+.card-text    { color: var(--gris) !important; }
+.card-body p  { color: var(--gris); }
+.text-muted   { color: var(--gris) !important; }
+.card-footer small { color: var(--gris) !important; }
+.card-footer a     { color: #4d8fff !important; }
+td, th             { color: var(--blanc) !important; }
+.form-control,
+.form-control:focus { color: var(--blanc) !important; }
+
+/* ==========================================================
+   CORRECTION FINALE CHOICES.JS (MENU FORMATIONS)
+   ========================================================== */
+
+/* 1. Le conteneur principal (le bouton du menu) */
+.choices__inner {
+    background-color: var(--fond-carte) !important;
+    border: 1px solid var(--bordure) !important;
+    color: var(--blanc) !important;
+    border-radius: 0 !important;
+}
+
+/* 2. L'élément sélectionné affiché dans le champ */
+.choices__list--single .choices__item {
+    background: none !important;
+    background-color: transparent !important;
+    color: var(--blanc) !important;
+}
+
+/* 3. La liste déroulante (le menu qui s'ouvre) */
+.choices__list--dropdown {
+    background-color: var(--fond-carte) !important;
+    border: 1px solid var(--bleu-clair) !important;
+    z-index: 9999 !important; /* Pour passer devant le footer */
+}
+
+/* 4. TOUTES les options de la liste (on retire tout fond par défaut) */
+.choices__list--dropdown .choices__item {
+    background-color: transparent !important;
+    color: var(--blanc) !important;
+    border: none !important;
+}
+
+/* 5. Effet au SURVOL (Highlight) : on met juste un léger gris pour voir où on est */
+.choices__list--dropdown .choices__item--selectable.is-highlighted {
+    background-color: rgba(255, 255, 255, 0.1) !important; 
+    color: var(--blanc) !important;
+}
+
+/* 6. L'option déjà sélectionnée dans la liste (on retire le bleu aussi) */
+.choices__list--dropdown .choices__item--selectable.is-selected {
+    background-color: transparent !important;
+    color: var(--bleu-clair) !important; /* On met juste le texte en bleu clair pour savoir qu'il est choisi */
+}
+
+/* 7. Gestion de l'empilement pour passer devant le footer */
+.choices {
+    position: relative;
+    z-index: 1050 !important; 
+}
+
+footer {
+    z-index: 1 !important; /* On s'assure que le footer reste derrière */
+}
+
+/* Boutons de situation (Candidats/Admis) */
+.btn-outline-dark {
+    border-color: var(--bleu-clair) !important;
+    color: var(--blanc) !important; /* Texte toujours blanc */
+    background: rgba(0, 71, 196, 0.1);
+    font-weight: 700;
+}
+
+/* État quand le bouton est COCHÉ (sélectionné) */
+.btn-check:checked + .btn-outline-dark {
+    background-color: var(--bleu-clair) !important;
+    color: var(--blanc) !important;
+    box-shadow: var(--glow-bleu);
+    border-color: var(--blanc) !important;
+}
+
+.btn-outline-dark:hover {
+    background-color: rgba(0, 71, 196, 0.3);
+    color: var(--blanc) !important;
+}
+
+/* Titres des graphiques (h6 dans les cartes) */
+.card-title {
+    color: var(--blanc) !important;
+    font-family: 'Orbitron', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 10px;
+}
+
+/* Texte à l'intérieur du Résumé */
+#resume {
+    color: var(--blanc) !important;
+    font-size: 1.1rem; /* Un peu plus grand pour la lisibilité */
+}
+
+#resume strong {
+    color: #4d8fff; /* Bleu néon pour les labels importants (Boursiers, Femmes, etc.) */
+    text-shadow: 0 0 5px rgba(77, 143, 255, 0.4);
+}
+
+/* Suppression du gris "muted" dans le résumé */
+#resume .text-muted {
+    color: var(--gris) !important;
+}

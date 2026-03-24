@@ -7,7 +7,7 @@
 <form method="GET" action="/graphiques" class="mb-4">
     <div class="row g-3 align-items-end">
         <div class="col-md-4">
-        <label for="formation" class="form-label fw-bold">Formation</label>
+        <label for="formation" class="form-control">Formation</label>
         <select name="formation_id" id="formation" class="form-select">
             <option value="">Formations</option>
             <!--on récupère l'id des formations-->
@@ -18,7 +18,7 @@
 
         </div>
         <div class="col-md-3">
-            <label for="annee" class="form-label fw-bold">Année</label>
+            <label for="annee" class="form-control">Année</label>
             <select name="annee" id="annee" class="form-select">
                 {% for a in annees %}
                 <option value="{{ a }}" {% if annee == a %}selected{% endif %}>{{ a }}</option>
@@ -38,9 +38,9 @@
         <label class="btn btn-outline-dark" for="sit_admis">Admis</label>
     </div>
 </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-dark w-100">Afficher</button>
-        </div>
+<div class="col-md-2">
+        <button type="submit" class="btn btn-dark w-100">Afficher</button>
+    </div>
     </div>
 </form>
 
@@ -55,7 +55,7 @@
 <div class="text-center mb-4">
     <h4>{{ infos.nom }}</h4>
     {% if capacite %}
-    <p class="text-muted">Capacité moyenne : {{ capacite }} places</p>
+    <p id="info-capacite" class="text-muted">Capacité moyenne : {{ capacite }} places</p>
     {% endif %}
 </div>
 {% endif %}
@@ -96,7 +96,7 @@
 <!-- création de la structure de la page avec quatre emplacements vides pour y placer les graphiques -->
 <div class="row mb-4">
     <div class="col-md-6 mb-4">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100">
             <div class="card-body">
                 <h6 class="card-title text-center">Part des boursiers</h6>
                 <!--création d'un id pour chaque graphique qui sera appellé dans le javascript-->
@@ -105,7 +105,7 @@
         </div>
     </div>
     <div class="col-md-6 mb-4">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100">
             <div class="card-body">
                 <h6 class="card-title text-center">Répartition par sexe</h6>
                 <canvas id="graphique_sexe"></canvas>
@@ -113,7 +113,7 @@
         </div>
     </div>
     <div class="col-md-6 mb-4">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100">
             <div class="card-body">
                 <h6 class="card-title text-center">Filière d'origine</h6>
                 <canvas id="graphique_filiere"></canvas>
@@ -121,7 +121,7 @@
         </div>
     </div>
     <div class="col-md-6 mb-4">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100">
             <div class="card-body">
                 <h6 class="card-title text-center">Mention au baccalauréat</h6>
                 <canvas id="graphique_mention"></canvas>
@@ -132,7 +132,7 @@
 
 <!-- création d'un emplacement en bas de la page pour le résumé selon la sélection de l'utilisateur, qui sera rempli par javascript -->
 <div class="card border-dark mb-4">
-    <div class="card-header bg-dark text-white fw-bold">Résumé </div>
+    <div class="card-header fw-bold">Résumé </div>
     <div class="card-body" id="resume">
         <p class="text-muted">Chargement des données...</p>
     </div>
@@ -140,7 +140,7 @@
 
 {% else %}
 <div class="alert alert-info mt-3">
-    Sélectionne une formation, une année et une situation pour afficher les graphiques.
+    Sélectionnez une formation, une année et une situation pour afficher les graphiques.
 </div>
 {% endif %}
 
@@ -148,11 +148,11 @@
 
 <!--chargement de liens CDN choice js pour pouvoir choisir es formations-->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
  <!--chrgement de chart.js-->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
-<!--plugin qui permet de décaler le rendu du graphique jusqu'à ce qu'il oit visible dans la fenêtre-->
+<!--plugin qui permet de décaler le rendu du graphique jusqu'à ce qu'il soit visible dans la fenêtre-->
 
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-deferred@1.0.2/dist/chartjs-plugin-deferred.min.js"></script>
 <!--plugin qui ajoute automatiquement des couleurs aux graphiques-->
@@ -175,7 +175,7 @@
 <script>
 //le code cherche le canva dans le html via son id définit plus haut et crée un graphique camembert. 
 // Si l canva n'existe pas, le javascript ne retourne rien
-    function creerCamembertVide(id) {
+    function CamembertVide(id) {
         const ctx = document.getElementById(id);
         if (!ctx) return null;
         return new Chart(ctx, {
@@ -191,14 +191,14 @@
         });
     }
 
-    //on stocke les camamberts vides dans des variables. Ils seront mis à jour avec update() lorsque les données sont reçues avec fetch()
-    const graphBoursiers = creerCamembertVide('graphique_boursiers');
-    const graphSexe = creerCamembertVide('graphique_sexe');
-    const graphFiliere = creerCamembertVide('graphique_filiere');
-    const graphMention = creerCamembertVide('graphique_mention');
+    //on stocke les camemberts vides dans des variables. Ils seront mis à jour avec update() lorsque les données sont reçues avec fetch()
+    const graphBoursiers = CamembertVide('graphique_boursiers');
+    const graphSexe = CamembertVide('graphique_sexe');
+    const graphFiliere = CamembertVide('graphique_filiere');
+    const graphMention = CamembertVide('graphique_mention');
 
     // on récupère les paramètres de l'url qui correspondent aux choix de l'utiliateur
-    const urlDonnees = "{{ url_for('graphiques_donnees') }}";
+    const urlDonnees = "{{ url_for('graphique.graphiques_donnees') }}";
 
     // on récupère les paramètres de l'url qui correspondent aux choix de l'utiliateur
     const params = new URLSearchParams(window.location.search); //récupère une partie de l'url qui correspond aux choix utilisateur, transforme ce choix en objet qu'on peux récupérer avec get
@@ -209,19 +209,23 @@
     // si formation et année sont sélectionnées, fetch() est lancé
     // fetch() envoie une requête vers la route avec les paramètres de l'utilisateur en url 
     if (formationId && annee) {
-        fetch(`${urlDonnees}?formation_id=${formationId}&annee=${annee}&situation=${situation}`)
+        const urlApi = `{{ url_for('graphique.graphiques_donnees') }}?formation_id=${formationId}&annee=${annee}&situation=${situation}`;
+        
 
         //conversion de la réponse en json
+        fetch(urlApi)
             .then(response => response.json())
             //on remplit les graphiques avec le json
             .then(data => {
-                if (!data) return;
+                if (!data || Object.keys(data).length === 0) {
+                    document.getElementById('resume').innerHTML = "Aucune donnée disponible pour cette sélection.";
+                    return;
+                };
 
-                //la capacité ne s'affiche pas pour l'instant : à modifier
-                const capaciteEl = document.getElementById('info-capacite');
-                if (capaciteEl && data.capacite !== null && data.capacite !== undefined) {
-                    capaciteEl.textContent = `Capacité moyenne : ${data.capacite} places`;
-                }
+                //affichage de la capacité
+                const capaciteE = document.getElementById('info-capacite');
+                if (capaciteE) capaciteE.textContent = data.capacite ? `Capacité moyenne : ${data.capacite} places` : '';
+                
 
                 // définition d'une fonction pour remplir les graphiques existants avec des données, on modifie les labels et valeurs vides
                 function remplirCamembert(graphe, labels, valeurs) {
