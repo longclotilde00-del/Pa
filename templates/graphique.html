@@ -4,45 +4,39 @@
 {% block content %}
 
 <!-- on crée ici le formulaire qui permet à l'utilisateur de choisir les filtres-->
-<form method="GET" action="/graphiques" class="mb-4">
+<form method="GET" action="{{ url_for('graphique.graphiques') }}" class="mb-4">
+    {# Ajout du token de sécurité (même si en GET c'est moins critique, c'est la norme Flask-WTF) #}
+    {{ form.hidden_tag() }}
+
     <div class="row g-3 align-items-end">
         <div class="col-md-4">
-        <label for="formation" class="form-control">Formation</label>
-        <select name="formation_id" id="formation" class="form-select">
-            <option value="">Formations</option>
-            <!--on récupère l'id des formations-->
-             {% for f in formations %}
-            <option value="{{ f.id }}" {% if formation_id|string == f.id|string %}selected{% endif %}>{{ f.nom[:200] }}</option>
-            {% endfor %}
-        </select>
-
+            {{ form.formation_id.label(class="form-label fw-bold") }}
+            {{ form.formation_id(id="formation", class="form-select") }}
         </div>
+
         <div class="col-md-3">
-            <label for="annee" class="form-control">Année</label>
-            <select name="annee" id="annee" class="form-select">
-                {% for a in annees %}
-                <option value="{{ a }}" {% if annee == a %}selected{% endif %}>{{ a }}</option>
+            {{ form.annee.label(class="form-label fw-bold") }}
+            {{ form.annee(id="annee", class="form-select") }}
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold">Situation</label>
+            <div class="btn-group w-100" role="group">
+                {% for subfield in form.situation %}
+                    {{ subfield(class="btn-check") }}
+                    {{ subfield.label(class="btn btn-outline-dark") }}
                 {% endfor %}
-            </select>
+            </div>
         </div>
-        <div class="col-md-3">
-    <label class="form-label fw-bold">Situation</label>
-    <!--pour le choix de situation, les deux choix ne sont pas présentés sous forme de menu déroulant mais visibles côte à côte-->
-    <div class="btn-group w-100" role="group">
-        <input type="radio" class="btn-check" name="situation" id="sit_candidats" 
-               value="candidats" {% if situation == 'candidats' %}checked{% endif %}>
-        <label class="btn btn-outline-dark" for="sit_candidats">Candidats</label>
 
-        <input type="radio" class="btn-check" name="situation" id="sit_admis" 
-               value="admis" {% if situation == 'admis' %}checked{% endif %}>
-        <label class="btn btn-outline-dark" for="sit_admis">Admis</label>
-    </div>
-</div>
-<div class="col-md-2">
-        <button type="submit" class="btn btn-dark w-100">Afficher</button>
-    </div>
+        <div class="col-md-2">
+            {{ form.submit(class="btn btn-dark w-100") }}
+        </div>
     </div>
 </form>
+
+
+
 
 <!--on définit d'abord des graphiques vide,s puis fetch() va chercher les données-->
 <!--on crée une boucle avec jinja, si les infos sont slectionnées, alors la page se crée-->
@@ -198,7 +192,7 @@
     const graphMention = CamembertVide('graphique_mention');
 
     // on récupère les paramètres de l'url qui correspondent aux choix de l'utiliateur
-    const urlDonnees = "{{ url_for('graphique.graphiques_donnees') }}";
+    const urlDonnees = "{{ url_for('graphique.graphiques_donnees', formation_id=0, annee=0, situation='SITUATION_DATA') }}";
 
     // on récupère les paramètres de l'url qui correspondent aux choix de l'utiliateur
     const params = new URLSearchParams(window.location.search); //récupère une partie de l'url qui correspond aux choix utilisateur, transforme ce choix en objet qu'on peux récupérer avec get
@@ -209,7 +203,10 @@
     // si formation et année sont sélectionnées, fetch() est lancé
     // fetch() envoie une requête vers la route avec les paramètres de l'utilisateur en url 
     if (formationId && annee) {
-        const urlApi = `{{ url_for('graphique.graphiques_donnees') }}?formation_id=${formationId}&annee=${annee}&situation=${situation}`;
+        const urlApi = urlDonnees 
+        .replace(0, formationId)
+        .replace(0, annee)
+        .replace('SITUATION_DATA', situation);
         
 
         //conversion de la réponse en json
