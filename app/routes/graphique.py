@@ -3,7 +3,7 @@ from flask_login import login_required
 from app.models.user import db 
 from app.models.parcourstat import Formation, Etablissement, Admissions, Candidatures
 from sqlalchemy import func, or_, case, and_, not_
-from app.models.formulaire import ChoixFormation
+from app.models.formulaire import FiltreGraphique
 from app.utils.transformation import clean_arg
 
 graphique = Blueprint('graphique', __name__)
@@ -122,35 +122,24 @@ def graphiques_donnees(formation_id, annee, situation):
     })
 
 
-#simplification de la route principale, qui fournit la liste des formation et l'année pour les filtres
-#récupère les listes des formations pour que l'utilisateur puisse choisir 
-#récupère les infos générales d'une formation : nom, établissement, sélectivité
-#génère page html avec graphiques vides
+
 @graphique.route("/graphiques", methods=['GET'])
 @login_required
 def graphiques():
     """
-    Route qui permet d'afficher la page Graphiques de l'application, et qui retourne le template graphique.html avec le choix des formations, des années, établissements, et les infos générales sur chaque formation.
+    Route qui permet d'afficher la page Graphiques de l'application, et qui retourne 
+    le template graphique.html avec le choix des formations, des années, 
+    la liste des établissements dans laquelle la formation est proposée, 
+    et les infos générales sur chaque formation.
     Les données des quatre graphiques sont chargées via la route précédente /graphique/donnees
-
     """
     # on commence par récupérer la liste des formations par leur nom, peu importe leur établissement
     formations = db.session.query( 
-        func.min(Formation.id).label('id'), #utilisation de min() pour avoir une liste de formation unique en sélectionnant un seul id pour plusieurs formations ayant le même nom
+        func.min(Formation.id).label('id'), #utilisation de func.min() pour avoir une liste de formation unique en sélectionnant un seul id pour plusieurs formations ayant le même nom
         Formation.nom
         ).filter(
-            not_(Formation.nom.ilike('bac %')) #suppresion des formations dont le nom commencent par bac, car les différents bacs (S, ES, L...) sont présents dans les données, on ne veut garder que les formations d'enseignement supérieur
+            not_(Formation.nom.ilike('bac %')) #exclusion des formations dont le nom commencent par bac, car les différents bacs (S, ES, L...) sont présents dans les données, on ne veut garder que les formations d'enseignement supérieur
         ).group_by(Formation.nom).order_by(Formation.nom).all() #group by nom : regrouper les formations qui ont le même nom en une seule ligne
-
-    
-    # on instancie la classe ChoixFormation qui est un formulaire FlaskForm
-    form = ChoixFormation()
-
-    # remplissage dynamique du formulaire de choix de formation en récupérant le nom de la formation par son id
-    # afin d'éviter un choix par défaut dans le formulaire, on met un "0"
-    form.formation_id.choices = [(0, "Choisir une formation")] + [(f.id, f.nom) for f in formations] 
-    # on définit les deux années que peut choisir l'utilisateur 
-    form.annee.choices = [(2024, "2024"), (2018, "2018")]
 
     # récupération des paramètres donnés par l'utilisateur
     # on utilise clean_arg() afin de transformer les chaines vides en None et ainsi éviter le erreurs
@@ -158,46 +147,58 @@ def graphiques():
     annee = request.args.get("annee", 0, type=int) 
     situation = request.args.get("situation", "admis")
 
-    # on convertit l'identifiant de la formation en int
+    # on convertit l'identifiant de la formation en int pour que Flaskform reçoive bien le paramètre
     formation_id = int(formation_id) if (formation_id and formation_id != 0) else None
 
-    choix_annees = [(0, "Choisir une année")]
+    # on instancie la classe ChoixFormation qui correspond au formulaire FlaskForm
+    form = FiltreGraphique(situation=situation)
 
-    #pré-remplissage du formulaire si l'id de la formation existe, garde en mémoire le champ sélectionné par l'utilisateur 
-    if formation_id:
-        form.formation_id.data = formation_id
-        formation_nom = db.session.query(Formation.nom).filter(Formation.id == formation_id).scalar()
-        q_adm = db.session.query(Admissions.annee).join(Formation).filter(Formation.nom == formation_nom)
-        q_cand = db.session.query(Candidatures.annee).join(Formation).filter(Formation.nom == formation_nom)
-        annees_db = [r[0] for r in q_adm.union(q_cand).order_by(Admissions.annee.desc()).all()]
-        choix_annees += [(a, str(a)) for a in annees_db]
-
-        # Si une seule année existe, on la force comme sélection par défaut
-        if len(annees_db) == 1:
-            annee_selectionnee = annees_db[0]
-        # Sinon, si l'utilisateur n'a pas encore fait de choix manuel, on reste sur "0"
-        elif annee_selectionnee not in annees_db:
-            annee_selectionnee = 0
-    else:
-        # Si pas de formation, on peut proposer les deux par défaut ou rester vide
-        choix_annees += [(2024, "2024"), (2018, "2018")]
-        annee_selectionnee = 0
-
-        form.annee.choices = choix_annees
-        form.annee.data = annee
-        form.situation.data = situation
+# remplissage dynamique du formulaire de choix de formation en récupérant le nom de la formation par son id
+    # afin d'éviter un choix par défaut dans le formulaire, on met un "0"
+    form.formation_id.choices = [(0, "Choisir une formation")] + [(f.id, f.nom) for f in formations] 
     
+
+    # on initialise les variables avant d'effectuerles conditions
+    choix_annees = [(0, "Choisir une année")]
+    annee_selectionnee = annee
     #si aucune formation n'est choisie, infos retourne None et la liste d'établissement retourne un dictionnaire vide
     infos = None
     etablissements = []
-  
 
-    # affichage des informtions générales sur les formations et les établsisements
+    #pré-remplissage du formulaire si l'id de la formation existe, garde en mémoire le champ sélectionné par l'utilisateur 
+    # récupération des années disponibles pour la formation sélectionnée
+    # remplissage du formulaire des années avec seulement les années qui otn des données pour la formation choisie
+    if formation_id:
+        form.formation_id.data = formation_id
+        resultat = db.session.query(Formation.nom).filter(Formation.id == formation_id).first()
+        formation_nom = resultat[0] if resultat else None        # on vérifie si des données existent pour chaque année (2018 ou 2024) en renvoyant la première ligne de données avec first()
+        a2018 = db.session.query(Admissions.annee).join(Formation).filter(
+            Formation.nom == formation_nom, Admissions.annee == 2018
+        ).first()
+        a2024 = db.session.query(Admissions.annee).join(Formation).filter(
+            Formation.nom == formation_nom, Admissions.annee == 2024
+        ).first()
+
+        #on définit la liste des années disponibles pour la formation choisie
+        #seule les années pour lesquelles les donnés existent sont préselectionnées dans le formulaire lors du choix de la formation
+        annees_db = [a for a, existe in [(2024, a2024), (2018, a2018)] if existe]
+        choix_annees += [(a, str(a)) for a in annees_db]
+
+        # si les données existent pour une seule année, 2018 ou 2024, préselection de cette année automatiquement
+        #sinon, affichage de "chosiir une année"
+        if len(annees_db) == 1:
+            annee_selectionnee = annees_db[0]
+        elif annee in annees_db:
+            annee_selectionnee = annee
+
+        # récupère les infos générales sur la formation
+        infos = Formation.query.get(formation_id) 
+  
+    # si une année est sélectionnée
     # Jointure entre formation et etablissement pour récupérer le nom de la formation, le nom de l'établissement et la sélectivité
     # si une formation est sélectionnée, on affiche la liste des établissements qui offrent cette formation, avec leurs infos: site web, adresse, nom 
-    if formation_id:
-        infos = Formation.query.get(formation_id)
-        etablissements = db.session.query(
+    if annee_selectionnee != 0:
+            etablissements = db.session.query(
             Etablissement.nom,
             Etablissement.adresse,
             Etablissement.site_web,
@@ -215,21 +216,27 @@ def graphiques():
     ).label('taux_admission')
     #récupération des établissements
     ).join(Formation, Etablissement.id == Formation.etablissement_id)\
-    .outerjoin(Admissions, and_(Admissions.formation_id == Formation.id, Admissions.annee == annee))\
-    .outerjoin(Candidatures, and_(Candidatures.formation_id == Formation.id, Candidatures.annee == annee))\
+    .outerjoin(Admissions, and_(Admissions.formation_id == Formation.id, Admissions.annee == annee_selectionnee))\
+    .outerjoin(Candidatures, and_(Candidatures.formation_id == Formation.id, Candidatures.annee == annee_selectionnee))\
     .filter(Formation.nom == infos.nom)\
     .order_by(Etablissement.nom).all()
+
+    #si aucune formation n'est sélectionnée, les deux années sont proposées      
+    else:
+        choix_annees += [(2024, "2024"), (2018, "2018")]
+
+   # on ijecte les choix sélectionnés dans le formulaire
+    form.annee.choices = choix_annees
+    form.annee.data = annee_selectionnee
+    form.situation.data = situation
         
     
     #génère page html avec les menus déoulants et les infos des formations seront chargées par fetch depuis le template html
-    #les données pour les graphiques seront
-
     return render_template("graphique.html",
         form=form,
         formations=formations,
-        annees=[2024, 2018],
         formation_id=formation_id,
-        annee=annee,
+        annee=annee_selectionnee,
         situation=situation,
         infos=infos,
         etablissements=etablissements,
